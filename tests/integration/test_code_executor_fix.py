@@ -65,8 +65,6 @@ async def test_code_executor():
 
 if __name__ == '__main__':
     import sys
-    sys.path.insert(0, 'c:\\Users\\Asus\\Downloads\\adk-python\\src')
-    
     success = asyncio.run(test_code_executor())
     if success:
         print('\n✓ Test PASSED - No infinite loop detected')

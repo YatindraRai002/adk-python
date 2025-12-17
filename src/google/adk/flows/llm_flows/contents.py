@@ -225,7 +225,8 @@ def _contains_empty_content(event: Event) -> bool:
   This can happen to the events that only changed session state.
   When both content and transcriptions are empty, the event will be considered
   as empty. The content is considered empty if none of its parts contain text,
-  inline data, file data, function call, or function response.
+  inline data, file data, function call, function response, executable code,
+  or code execution result.
 
   Args:
     event: The event to check.
@@ -246,6 +247,8 @@ def _contains_empty_content(event: Event) -> bool:
           and not p.file_data
           and not p.function_call
           and not p.function_response
+          and not p.executable_code
+          and not p.code_execution_result
           for p in [event.content.parts[0]]
       )
   ) and (not event.output_transcription and not event.input_transcription)

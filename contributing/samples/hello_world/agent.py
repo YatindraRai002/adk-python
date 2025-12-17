@@ -65,7 +65,7 @@ async def check_prime(nums: list[int]) -> str:
 
 
 root_agent = Agent(
-    model='gemini-2.0-flash',
+    model='gemini-pro',
     name='hello_world_agent',
     description=(
         'hello world agent that can roll a dice of 8 sides and check prime'
@@ -98,6 +98,7 @@ root_agent = Agent(
     #     ),
     # ),
     generate_content_config=types.GenerateContentConfig(
+        max_output_tokens=100,
         safety_settings=[
             types.SafetySetting(  # avoid false alarm about rolling dice.
                 category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,

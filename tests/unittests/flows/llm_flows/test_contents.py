@@ -535,3 +535,83 @@ async def test_events_with_empty_content_are_skipped():
           role="user",
       ),
   ]
+
+
+@pytest.mark.asyncio
+async def test_code_execution_events_are_not_skipped():
+  """Test that events with executable_code or code_execution_result are included.
+  
+  This test ensures that code execution events are properly included in the
+  LLM context and not filtered out as empty content, which would cause an
+  infinite loop (issue #3921).
+  """
+  agent = Agent(model="gemini-2.5-flash", name="test_agent")
+  llm_request = LlmRequest(model="gemini-2.5-flash")
+  invocation_context = await testing_utils.create_invocation_context(
+      agent=agent
+  )
+
+  events = [
+      Event(
+          invocation_id="inv1",
+          author="user",
+          content=types.UserContent("Write code to compute 2+2"),
+      ),
+      # Event with executable code (should NOT be skipped)
+      Event(
+          invocation_id="inv2",
+          author="test_agent",
+          content=types.Content(
+              parts=[
+                  types.Part(
+                      executable_code=types.ExecutableCode(
+                          code="print(2+2)",
+                          language="PYTHON",
+                      )
+                  )
+              ],
+              role="model",
+          ),
+      ),
+      # Event with code execution result (should NOT be skipped)
+      Event(
+          invocation_id="inv3",
+          author="test_agent",
+          content=types.Content(
+              parts=[
+                  types.Part(
+                      code_execution_result=types.CodeExecutionResult(
+                          output="4",
+                          outcome=types.Outcome.OUTCOME_OK,
+                      )
+                  )
+              ],
+              role="model",
+          ),
+      ),
+      Event(
+          invocation_id="inv4",
+          author="test_agent",
+          content=types.ModelContent("The result is 4"),
+      ),
+  ]
+  invocation_context.session.events = events
+
+  # Process the request
+  async for _ in contents.request_processor.run_async(
+      invocation_context, llm_request
+  ):
+    pass
+
+  # Verify code execution events are included
+  assert len(llm_request.contents) == 4
+  assert llm_request.contents[0] == types.UserContent(
+      "Write code to compute 2+2"
+  )
+  # Check that executable_code is present
+  assert llm_request.contents[1].parts[0].executable_code is not None
+  assert llm_request.contents[1].parts[0].executable_code.code == "print(2+2)"
+  # Check that code_execution_result is present
+  assert llm_request.contents[2].parts[0].code_execution_result is not None
+  assert llm_request.contents[2].parts[0].code_execution_result.output == "4"
+  assert llm_request.contents[3] == types.ModelContent("The result is 4")
